@@ -1,7 +1,7 @@
 --[[
 	TheOS Kernel
 	by Creator
-	for TheOS &
+	for OmniOS &
 	you to learn
 	from it! (Yeah learn, rather become dumber)
 	theoriginalbit
@@ -26,7 +26,7 @@ local function safePairs(t)
   local i = 0
   return function()
 	i = i + 1
-	return keys[i], t[keys[i]]
+	return keys[i], t[keys[i]] 
   end
 end
 
@@ -61,17 +61,18 @@ local function drawOpen()
 
 	while true do
 		local evnt = {os.pullEventRaw()}
+		log.log("Close",xVsProcess[evnt[4]])
 		if evnt[1] == "mouse_click" then
 			if w-12 <= evnt[3] and evnt[3] <= w then
 				if xVsProcess[evnt[4]] then
 					routines[activeRoutine].window.setVisible( false )
 					activeRoutine = xVsProcess[evnt[4]]
 					routines[activeRoutine].window.setVisible(true)
-					history[#history+1] = activeRoutine
+					--history[#history+1] = activeRoutine
 					return
 				end
 			elseif w-14 == evnt[3] then
-				if xVsProcess[evnt[4]] and xVsProcess[evnt[4]] ~= "Desktop1" then
+				if xVsProcess[evnt[4]] and xVsProcess[evnt[4]] ~= "Debug1" then
 					if activeRoutine == xVsProcess[evnt[4]] then
 						--history[#history] = nil
 						--for i,v in pairs(history) do
@@ -79,7 +80,7 @@ local function drawOpen()
 						--		table.remove(history,i)
 						--	end
 						--activeRoutine = history[#history]
-						activeRoutine = "Desktop1"
+						activeRoutine = "Debug1"
 						routines[activeRoutine].window.setVisible(true)
 					end
 					routines[xVsProcess[evnt[4]]] = nil
@@ -101,14 +102,16 @@ local function checkIfDead(routine)
 				end
 			end
 			activeRoutine = history[#history]]--
-			activeRoutine = "Desktop1"
+			activeRoutine = "Debug1"
 			routines[activeRoutine].window.setVisible(true)
 		end
 		return true
 	else return false end
 end
 
-function newRoutine(name,title,func,permission,...)
+Kernel = {}
+
+function Kernel.newRoutine(name,title,func,permission,...)
 	log.log("System","Launching task "..name..". By kernel")
 	local oldName = name
 	local tries = 1
@@ -117,7 +120,7 @@ function newRoutine(name,title,func,permission,...)
 	if permission == "userTest" then
 		log.log("System","Launching task "..name..": adding environment. By kernel")
 		local env = Sandbox.newEnv(oldName)
-		--log.log("SandboxOutput",textutils.serialize(env))
+		log.log("System","Environment was successful")
 		setfenv(func,env)
 	end
 
@@ -131,26 +134,61 @@ function newRoutine(name,title,func,permission,...)
 	}
 
 	--Run it!
-	if routines[activeRoutine] then routines[activeRoutine].window.setVisible(false) end
-	activeRoutine = name
-	term.redirect(routines[activeRoutine].window)
-	routines[activeRoutine].window.setVisible(true)
-	logMessage, routines[activeRoutine].filter = coroutine.resume(routines[activeRoutine].routine,...)
-	if not logMessage then
-		log.log(activeRoutine,"Error: "..tostring(routines[activeRoutine].filter),activeRoutine)
+	if routines[activeRoutine] then
+		term.redirect(routines[name].window)
+		routines[name].window.setVisible(false)
+		logMessage, routines[name].filter = coroutine.resume(routines[name].routine,...)
+		if not logMessage then
+			log.log(name,"Error: "..tostring(routines[name].filter),name)
+		end
+		term.redirect(currTerm)
+		checkIfDead(name)
+		--history[#history+1] = activeRoutine
+		term.redirect(routines[activeRoutine].window)
+		routines[activeRoutine].window.redraw()
+	else
+		activeRoutine = name
+		term.redirect(routines[activeRoutine].window)
+		routines[activeRoutine].window.setVisible(true)
+		logMessage, routines[activeRoutine].filter = coroutine.resume(routines[activeRoutine].routine,...)
+		if not logMessage then
+			log.log(activeRoutine,"Error: "..tostring(routines[activeRoutine].filter),activeRoutine)
+		end
+		term.redirect(currTerm)
+		checkIfDead(activeRoutine)
+		--history[#history+1] = activeRoutine
 	end
-	term.redirect(currTerm)
-	checkIfDead(activeRoutine)
-	history[#history+1] = activeRoutine
 end
 
-function getPermission(program)
+
+
+function Kernel.getPermission(program)
 	return routines[program].permission or "Not a valid program"
+end
+
+function Kernel.kill(thread)
+	if thread == "Debug1" then
+		return "Cannot kill debug, instead use kill !zygote"
+	else
+		if thread == activeRoutine then
+			activeRoutine = "Debug1"
+			routines[activeRoutine].window.setVisible(true)
+		end
+		routines[thread] = nil
+	end
+end
+
+function Kernel.list()
+	local buffer = {}
+	for i,v in pairs(routines) do
+		buffer[#buffer+1] = i
+	end
+	return buffer
 end
 
 drawClosed()
 
-newRoutine(...)
+Kernel.newRoutine(...)
 
 while true do
 	local event = #eventBuffer == 0 and {os.pullEventRaw()} or table.remove(eventBuffer,1)
@@ -170,13 +208,15 @@ while true do
 		end
 	else
 		for i,v in safePairs(routines) do
-			term.redirect(routines[i].window)
-			logMessage, routines[i].filter = coroutine.resume(routines[i].routine,unpack(event))
-			if not logMessage then
-				log.log(i,"Error: "..tostring(routines[i].filter),i)
+			if routines[i] then
+				term.redirect(routines[i].window)
+				logMessage, routines[i].filter = coroutine.resume(routines[i].routine,unpack(event))
+				if not logMessage then
+					log.log(i,"Error: "..tostring(routines[i].filter),i)
+				end
+				term.redirect(currTerm)
+				checkIfDead(i)
 			end
-			term.redirect(currTerm)
-			checkIfDead(i)
 		end
 	end
 end

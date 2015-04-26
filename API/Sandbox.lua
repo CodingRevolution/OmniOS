@@ -10,11 +10,11 @@ local oldGetfenv = getfenv
 local oldLoadfile = loadfile
 local globalName = ""
 
+
 --Functions--
 
 function newEnv(name)
 	globalName = name
-	log.log("Sandbox",globalName)
 	toReturn = {
 		redstone = redstone,
 		gps = gps,
@@ -52,7 +52,7 @@ function newEnv(name)
 		colours = colours,
 		pcall = pcall,
 		sleep = sleep,
-		loadfile = function(path) return setfenv(loadfile("OmniOS/Programs/"..globalName..".app/"..path),envToReturn) end,
+		loadfile = function(path) return setfenv(loadfile("OmniOS/Programs/"..globalName..".app/"..path),toReturn) end,
 		math = math,
 		pairs = pairs,
 		fs = {
@@ -105,15 +105,15 @@ function newEnv(name)
 		OmniOS = OmniOS,
 		log = log,
 	}
-	function env(tTable)
-		for i,v in pairs(tTable) do
-			local tType = type(v)
-			if tType == "table" then
-				env(v)
-			elseif tType == "function" then
-				setfenv(v,toReturn)
-			end
+	local function localGetfenv( env )
+		if env == nil then
+			env = toReturn
+		elseif getfenv( env ) == "number" and env > 0 then
+			env = env + 1
 		end
+		local fenv = getfenv(env)
+		return fenv
 	end
+	toReturn.getfenv = localGetfenv
 	return toReturn
 end

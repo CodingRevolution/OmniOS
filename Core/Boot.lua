@@ -66,13 +66,14 @@ function goOn()
 	--login()
 	local kernel, err= loadfile("OmniOS/Core/Kernel.lua")
 	if err then print(err) os.pullEvent() log.log("Error",err) end
-	local desktop,err = loadfile("OmniOS/Programs/Desktop.app/Main.lua")
+	local startup, err = loadfile("OmniOS/Programs/Debug.app/Main.lua")
 	if err then print(err) os.pullEvent() log.log("Error",err) end
-	kernel("Desktop","Desktop",desktop,"user")
+	kernel("Debug","Debug",startup,"admin")
 end
 
 ok, err = pcall(goOn)
 
 if not ok then
+	log.log("Crash",err)
 	pcall(shell.run("OmniOS/Core/Crash.lua "..err))
 end
